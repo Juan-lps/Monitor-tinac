@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tinaco · Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #F6F7FB;
+    --card:      #FFFFFF;
+    --border:    #E7E9F0;
+    --indigo:    #5457E5;
+    --indigo-bg: #EEEEFD;
+    --green:     #16A34A;
+    --green-bg:  #EAFBF0;
+    --amber:     #D97706;
+    --amber-bg:  #FEF3E2;
+    --red:       #DC2626;
+    --text:      #0F172A;
+    --text-mid:  #64748B;
+    --text-low:  #94A3B8;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, sans-serif;
+    min-height: 100vh;
+    padding: 32px 20px 60px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 800px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .title-block p { margin: 0; font-size: 13px; color: var(--text-low); font-weight: 500; }
+  h1 { margin: 2px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -0.02em; }
+
+  .chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-mid);
+  }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-low); }
+  .dot.ok { background: var(--green); }
+  .dot.bad { background: var(--red); }
+
+  .grid-top {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 640px) { .grid-top { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+  }
+
+  /* Ring */
+  .ring-card { display: flex; align-items: center; gap: 20px; }
+  .ring-wrap { position: relative; width: 108px; height: 108px; flex-shrink: 0; }
+  .ring-wrap svg { transform: rotate(-90deg); }
+  .ring-track { stroke: var(--border); }
+  .ring-fill { stroke: var(--indigo); stroke-linecap: round; transition: stroke-dashoffset 1s ease; }
+  .ring-center {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+  }
+  .ring-center .num { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+  .ring-center .lbl { font-size: 10px; color: var(--text-low); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+
+  .ring-info p { margin: 0 0 6px; font-size: 12px; color: var(--text-low); font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; }
+  .ring-info .val { font-size: 13px; color: var(--text-mid); font-weight: 500; margin-bottom: 4px; }
+
+  /* Estado card */
+  .estado-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+  }
+  .estado-badge.on  { background: var(--green-bg); color: #0F7A38; }
+  .estado-badge.off { background: #F1F3F7; color: var(--text-mid); }
+  .estado-badge .dot2 { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .meta-row { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--border); font-size: 13px; }
+  .meta-row:first-of-type { border-top: none; }
+  .meta-row span:first-child { color: var(--text-mid); }
+  .meta-row span:last-child { font-weight: 600; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 16px; }
+  @media (max-width: 640px) { .stats { grid-template-columns: 1fr; } }
+  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 16px 18px; }
+  .stat .icon-box {
+    width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; margin-bottom: 10px;
+  }
+  .stat.a .icon-box { background: var(--indigo-bg); color: var(--indigo); }
+  .stat.b .icon-box { background: var(--amber-bg); color: var(--amber); }
+  .stat.c .icon-box { background: var(--green-bg); color: var(--green); }
+  .stat .label { font-size: 12px; color: var(--text-low); font-weight: 600; margin-bottom: 2px; }
+  .stat .value { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+
+  /* History */
+  .log-panel { background: var(--card); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .log-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+  .log-head h2 { font-size: 14px; font-weight: 700; margin: 0; }
+  .refresh-btn {
+    font-size: 12.5px; font-weight: 600; color: var(--indigo);
+    background: var(--indigo-bg); border: none; padding: 7px 14px;
+    border-radius: 8px; cursor: pointer;
+  }
+  .refresh-btn:active { transform: scale(0.97); }
+  .filtro-btn.active { background: var(--card) !important; color: var(--text) !important; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+
+  .log-list { max-height: 400px; overflow-y: auto; }
+  .log-row {
+    display: grid;
+    grid-template-columns: 20px 1fr 90px 90px 50px;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  @media (max-width: 640px) { .log-row { grid-template-columns: 16px 1fr 60px; } .log-row .origen, .log-row .nivel { display: none; } }
+  .log-row:last-child { border-bottom: none; }
+  .log-row .estado-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .log-row .estado-dot.on { background: var(--green); }
+  .log-row .estado-dot.off { background: var(--text-low); }
+  .log-row .fecha { color: var(--text); font-weight: 500; }
+  .log-row .fecha small { display: block; color: var(--text-low); font-weight: 400; font-size: 11.5px; }
+  .log-row .origen { color: var(--text-mid); font-size: 12px; }
+  .log-row .nivel { text-align: right; font-weight: 700; }
+
+  .empty, .error-box { padding: 40px 20px; text-align: center; color: var(--text-low); font-size: 13px; line-height: 1.7; }
+  .error-box { color: var(--red); }
+  .error-box code { display: block; margin-top: 8px; background: var(--bg); padding: 8px; border-radius: 8px; font-size: 11px; word-break: break-all; color: var(--text-mid); }
+
+  footer { margin-top: 16px; text-align: center; font-size: 12px; color: var(--text-low); font-weight: 500; }
+
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="title-block">
+      <p>Sistema de cisterna</p>
+      <h1>Panel de tinaco</h1>
+    </div>
+    <div class="chip"><span class="dot" id="connDot"></span><span id="connText">Cargando…</span></div>
+  </header>
+
+  <div class="grid-top">
+    <div class="card ring-card">
+      <div class="ring-wrap">
+        <svg width="108" height="108" viewBox="0 0 108 108">
+          <circle class="ring-track" cx="54" cy="54" r="46" fill="none" stroke-width="10"/>
+          <circle class="ring-fill" id="ringFill" cx="54" cy="54" r="46" fill="none" stroke-width="10"
+                  stroke-dasharray="289" stroke-dashoffset="289"/>
+        </svg>
+        <div class="ring-center">
+          <div class="num" id="nivelNum">--</div>
+          <div class="lbl">nivel</div>
+        </div>
+      </div>
+      <div class="ring-info">
+        <p>Último nivel recibido</p>
+        <div class="val" id="nivelFechaTxt">--</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="estado-badge off" id="estadoBadge"><span class="dot2"></span>Sin datos</div>
+      <div class="meta-row"><span>Origen</span><span id="origenTxt">--</span></div>
+      <div class="meta-row"><span>Último cambio</span><span id="fechaTxt">--</span></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <p style="margin:0;font-size:12px;color:var(--text-low);font-weight:600;letter-spacing:0.03em;text-transform:uppercase">Tendencia del nivel</p>
+      <span id="tendenciaTxt" style="font-size:12px;font-weight:600;color:var(--text-mid)">--</span>
+    </div>
+    <svg id="sparkline" width="100%" height="60" viewBox="0 0 400 60" preserveAspectRatio="none" style="display:block;overflow:visible"></svg>
+  </div>
+
+  <div class="stats">
+    <div class="stat a">
+      <div class="icon-box">⚡</div>
+      <div class="label">Encendidos hoy</div>
+      <div class="value" id="statEncendidosHoy">0</div>
+    </div>
+    <div class="stat b">
+      <div class="icon-box">◷</div>
+      <div class="label">Tiempo encendida hoy</div>
+      <div class="value" id="statTiempoHoy">0 min</div>
+    </div>
+    <div class="stat c">
+      <div class="icon-box">≡</div>
+      <div class="label">Registros totales</div>
+      <div class="value" id="statTotal">0</div>
+    </div>
+  </div>
+
+  <div class="log-panel">
+    <div class="log-head">
+      <h2>Historial de eventos</h2>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div style="display:flex;background:var(--bg);border-radius:8px;padding:3px;gap:2px" id="filtroTabs">
+          <button class="filtro-btn active" data-filtro="hoy" style="border:none;background:transparent;font-size:12px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;color:var(--text-mid)">Hoy</button>
+          <button class="filtro-btn" data-filtro="ayer" style="border:none;background:transparent;font-size:12px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;color:var(--text-mid)">Ayer</button>
+          <button class="filtro-btn" data-filtro="todos" style="border:none;background:transparent;font-size:12px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;color:var(--text-mid)">Todos</button>
+        </div>
+        <button class="refresh-btn" id="refreshBtn">Actualizar</button>
+      </div>
+    </div>
+    <div class="log-list" id="logList">
+      <div class="empty">Cargando registros…</div>
+    </div>
+  </div>
+
+  <footer id="footerNote">Se actualiza automáticamente cada 10 segundos.</footer>
+
+</div>
+
+<script>
+  const CONFIG = {
+    CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAisVFQi8KiaPp3A9X6tUBoeEPM38mIL3VLqN3oveDqAOBeZkbZngXCKnpvOjnpfMo_JqIhFp_rAW7/pub?gid=0&single=true&output=csv",
+    NIVEL_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAisVFQi8KiaPp3A9X6tUBoeEPM38mIL3VLqN3oveDqAOBeZkbZngXCKnpvOjnpfMo_JqIhFp_rAW7/pub?gid=1716776216&single=true&output=csv",
+    REFRESCO_MS: 10000
+  };
+
+  const el = (id) => document.getElementById(id);
+  const RING_CIRCUM = 2 * Math.PI * 46;
+
+  function parseFecha(str) {
+    if (!str || str.startsWith("SIN-NTP")) return null;
+    str = str.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+      const d = new Date(str.replace(" ", "T"));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T](\d{1,2}):(\d{2}):(\d{2})/);
+    if (m) {
+      const [, a, b, anio, hh, mm, ss] = m;
+      const d = new Date(+anio, +b - 1, +a, +hh, +mm, +ss);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    return null;
+  }
+
+  function formatoRelativo(d) {
+    if (!d) return "sin hora";
+    const diffMin = Math.round((Date.now() - d.getTime()) / 60000);
+    if (diffMin < 1) return "justo ahora";
+    if (diffMin < 60) return `hace ${diffMin} min`;
+    const diffH = Math.round(diffMin / 60);
+    if (diffH < 24) return `hace ${diffH} h`;
+    return d.toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
+  }
+
+  function parseCSV(texto) {
+    const lineas = texto.trim().split(/\r?\n/);
+    return lineas.map(linea => {
+      const campos = [];
+      let actual = "", entreComillas = false;
+      for (let i = 0; i < linea.length; i++) {
+        const c = linea[i];
+        if (c === '"') entreComillas = !entreComillas;
+        else if (c === ',' && !entreComillas) { campos.push(actual.trim()); actual = ""; }
+        else actual += c;
+      }
+      campos.push(actual.trim());
+      return campos;
+    });
+  }
+
+  let ultimaFechaEventos = null;
+  let ultimaFechaNivel = null;
+
+  function actualizarConexion() {
+    const referencias = [ultimaFechaEventos, ultimaFechaNivel].filter(Boolean);
+    const dot = el("connDot"), txt = el("connText");
+    if (!referencias.length) { dot.className = "dot bad"; txt.textContent = "Sin datos"; return; }
+    const masReciente = new Date(Math.max(...referencias.map(d => d.getTime())));
+    if ((Date.now() - masReciente.getTime()) < 2 * 3600 * 1000) {
+      dot.className = "dot ok"; txt.textContent = "En línea · " + formatoRelativo(masReciente);
+    } else {
+      dot.className = "dot bad"; txt.textContent = "Sin novedades · " + formatoRelativo(masReciente);
+    }
+  }
+
+  let filasEventos = [];
+  let filtroActivo = "hoy";
+
+  function dibujarSparkline(rows) {
+    const conNivel = rows.filter(r => r[3] !== undefined && !isNaN(parseInt(r[3], 10))).slice(-20);
+    const svg = el("sparkline");
+    if (conNivel.length < 2) {
+      svg.innerHTML = '';
+      el("tendenciaTxt").textContent = "Datos insuficientes";
+      return;
+    }
+    const valores = conNivel.map(r => Math.min(Math.max(parseInt(r[3], 10), 0), 100));
+    const min = Math.min(...valores), max = Math.max(...valores);
+    const rango = (max - min) || 1;
+    const puntos = valores.map((v, i) => {
+      const x = (i / (valores.length - 1)) * 400;
+      const y = 55 - ((v - min) / rango) * 50;
+      return `${x},${y}`;
+    });
+    const linea = `<polyline points="${puntos.join(' ')}" fill="none" stroke="#5457E5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const area = `<polygon points="0,60 ${puntos.join(' ')} 400,60" fill="#5457E5" opacity="0.08"/>`;
+    svg.innerHTML = area + linea;
+
+    const delta = valores[valores.length - 1] - valores[0];
+    el("tendenciaTxt").textContent = delta === 0 ? "Estable" : (delta > 0 ? `▲ subiendo ${delta}%` : `▼ bajando ${Math.abs(delta)}%`);
+    el("tendenciaTxt").style.color = delta > 0 ? "var(--green)" : (delta < 0 ? "var(--amber)" : "var(--text-mid)");
+  }
+
+  function filtrarFilas(rows, filtro) {
+    if (filtro === "todos") return rows;
+    const hoy = new Date();
+    const objetivo = new Date(hoy);
+    if (filtro === "ayer") objetivo.setDate(objetivo.getDate() - 1);
+    return rows.filter(([f]) => {
+      const d = parseFecha(f);
+      return d && d.getFullYear() === objetivo.getFullYear() &&
+             d.getMonth() === objetivo.getMonth() &&
+             d.getDate() === objetivo.getDate();
+    });
+  }
+
+  function renderHistorial() {
+    const filtradas = filtrarFilas(filasEventos, filtroActivo);
+    if (!filtradas.length) {
+      el("logList").innerHTML = '<div class="empty">No hay registros para este filtro.</div>';
+      return;
+    }
+    const html = filtradas.slice().reverse().slice(0, 100).map(([f, e, o, n, motivo]) => {
+      const d = parseFecha(f);
+      const on = e === "ENCENDIDA";
+      return `
+        <div class="log-row">
+          <span class="estado-dot ${on ? "on" : "off"}"></span>
+          <span class="fecha">${e}<small>${d ? d.toLocaleString("es-MX") : f}${motivo ? " · " + motivo : ""}</small></span>
+          <span class="origen">${o}</span>
+          <span></span>
+          <span class="nivel">${n}%</span>
+        </div>`;
+    }).join("");
+    el("logList").innerHTML = html;
+  }
+
+  document.getElementById("filtroTabs").addEventListener("click", (ev) => {
+    const btn = ev.target.closest(".filtro-btn");
+    if (!btn) return;
+    document.querySelectorAll(".filtro-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    filtroActivo = btn.dataset.filtro;
+    renderHistorial();
+  });
+
+  function render(rows) {
+    if (!rows.length) { el("logList").innerHTML = '<div class="empty">Todavía no hay registros en la hoja.</div>'; return; }
+
+    filasEventos = rows;
+
+    const ultimo = rows[rows.length - 1];
+    const [fecha, estado, origen] = ultimo;
+    const encendida = estado === "ENCENDIDA";
+
+    el("estadoBadge").innerHTML = '<span class="dot2"></span>' + (encendida ? "Encendida" : "Apagada");
+    el("estadoBadge").className = "estado-badge " + (encendida ? "on" : "off");
+    el("origenTxt").textContent = origen || "--";
+
+    const fechaObj = parseFecha(fecha);
+    el("fechaTxt").textContent = fechaObj ? fechaObj.toLocaleString("es-MX") : fecha;
+    ultimaFechaEventos = fechaObj;
+
+    const hoy = new Date();
+    const esHoy = (d) => d && d.getFullYear() === hoy.getFullYear() && d.getMonth() === hoy.getMonth() && d.getDate() === hoy.getDate();
+    let encendidosHoy = 0, minutosHoy = 0, inicioEncendido = null;
+
+    rows.forEach(([f, e]) => {
+      const d = parseFecha(f);
+      if (e === "ENCENDIDA") { if (esHoy(d)) encendidosHoy++; inicioEncendido = d; }
+      else if (e === "APAGADA" && inicioEncendido && d) {
+        minutosHoy += esHoy(d) ? Math.max(0, Math.round((d - inicioEncendido) / 60000)) : 0;
+        inicioEncendido = null;
+      }
+    });
+
+    el("statEncendidosHoy").textContent = encendidosHoy;
+    el("statTiempoHoy").textContent = minutosHoy + " min";
+    el("statTotal").textContent = rows.length;
+
+    dibujarSparkline(rows);
+    renderHistorial();
+    actualizarConexion();
+  }
+
+  function renderNivel(fecha, nivel) {
+    const n = parseInt(nivel, 10);
+    const clamped = isNaN(n) ? 0 : Math.min(Math.max(n, 0), 100);
+    el("nivelNum").textContent = isNaN(n) ? "--" : clamped + "%";
+    const offset = RING_CIRCUM - (clamped / 100) * RING_CIRCUM;
+    el("ringFill").style.strokeDashoffset = offset;
+
+    const fechaObj = parseFecha(fecha);
+    ultimaFechaNivel = fechaObj;
+    el("nivelFechaTxt").textContent = fechaObj ? fechaObj.toLocaleString("es-MX") : (fecha || "--");
+    actualizarConexion();
+  }
+
+  function cargarDatos() {
+    if (!CONFIG.CSV_URL || CONFIG.CSV_URL.includes("PEGA_AQUI")) {
+      el("logList").innerHTML = `<div class="error-box">Falta configurar CONFIG.CSV_URL en este archivo.</div>`;
+      return;
+    }
+    fetch(CONFIG.CSV_URL, { cache: "no-store" })
+      .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
+      .then(texto => {
+        const rows = parseCSV(texto).filter(r => r.length >= 4 && (r[1] === "ENCENDIDA" || r[1] === "APAGADA"));
+        render(rows);
+      })
+      .catch(err => {
+        el("logList").innerHTML = `<div class="error-box">No se pudo leer la hoja.<br>Revisa la publicación CSV.<br><code>${err.message || err}</code></div>`;
+        el("connDot").className = "dot bad"; el("connText").textContent = "Error de lectura";
+      });
+  }
+
+  function cargarNivel() {
+    if (!CONFIG.NIVEL_CSV_URL || CONFIG.NIVEL_CSV_URL.includes("PEGA_AQUI")) return;
+    fetch(CONFIG.NIVEL_CSV_URL, { cache: "no-store" })
+      .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
+      .then(texto => {
+        const filas = parseCSV(texto).filter(r => r.length >= 2 && r[0]);
+        if (!filas.length) return;
+        const [fecha, nivel] = filas[0];
+        renderNivel(fecha, nivel);
+      })
+      .catch(err => console.warn("No se pudo leer el nivel en vivo:", err));
+  }
+
+  let ultimaRevision = null;
+  function cargarTodo() { cargarDatos(); cargarNivel(); ultimaRevision = Date.now(); }
+  function actualizarFooter() {
+    if (!ultimaRevision) return;
+    const seg = Math.round((Date.now() - ultimaRevision) / 1000);
+    el("footerNote").textContent = `Se actualiza cada ${CONFIG.REFRESCO_MS / 1000}s · última revisión hace ${seg}s`;
+  }
+
+  el("refreshBtn").addEventListener("click", cargarTodo);
+  cargarTodo();
+  setInterval(cargarTodo, CONFIG.REFRESCO_MS);
+  setInterval(actualizarFooter, 1000);
+</script>
+</body>
+</html>
