@@ -23,6 +23,38 @@
     --text-low:  #94A3B8;
   }
 
+  [data-theme="dark"] {
+    --bg:        #0E1420;
+    --card:      #161D2B;
+    --border:    #263048;
+    --indigo:    #8285FF;
+    --indigo-bg: #262B52;
+    --green:     #34D399;
+    --green-bg:  #113328;
+    --amber:     #FBBF24;
+    --amber-bg:  #3A2A0E;
+    --red:       #F87171;
+    --text:      #F1F5F9;
+    --text-mid:  #94A3B8;
+    --text-low:  #64748B;
+  }
+
+  body, .card, .stat, .log-panel { transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
+
+  /* Etiquetas de origen, bien visibles */
+  .origen-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+  }
+  .origen-badge.manual { background: var(--indigo-bg); color: var(--indigo); }
+  .origen-badge.automatico { background: var(--amber-bg); color: var(--amber); }
+
   * { box-sizing: border-box; }
 
   body {
@@ -181,7 +213,10 @@
       <p>Sistema de cisterna</p>
       <h1>Panel de tinaco</h1>
     </div>
-    <div class="chip"><span class="dot" id="connDot"></span><span id="connText">Cargando…</span></div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button id="themeBtn" class="chip" style="cursor:pointer;font-family:inherit">🌙 Oscuro</button>
+      <div class="chip"><span class="dot" id="connDot"></span><span id="connText">Cargando…</span></div>
+    </div>
   </header>
 
   <div class="grid-top">
@@ -374,11 +409,12 @@
     const html = filtradas.slice().reverse().slice(0, 100).map(([f, e, o, n, motivo]) => {
       const d = parseFecha(f);
       const on = e === "ENCENDIDA";
+      const origenBadge = o ? `<span class="origen-badge ${o === "MANUAL" ? "manual" : "automatico"}">${o}</span>` : "";
       return `
         <div class="log-row">
           <span class="estado-dot ${on ? "on" : "off"}"></span>
           <span class="fecha">${e}<small>${d ? d.toLocaleString("es-MX") : f}${motivo ? " · " + motivo : ""}</small></span>
-          <span class="origen">${o}</span>
+          <span class="origen">${origenBadge}</span>
           <span></span>
           <span class="nivel">${n}%</span>
         </div>`;
@@ -406,7 +442,9 @@
 
     el("estadoBadge").innerHTML = '<span class="dot2"></span>' + (encendida ? "Encendida" : "Apagada");
     el("estadoBadge").className = "estado-badge " + (encendida ? "on" : "off");
-    el("origenTxt").textContent = origen || "--";
+    el("origenTxt").innerHTML = origen
+      ? `<span class="origen-badge ${origen === "MANUAL" ? "manual" : "automatico"}">${origen}</span>`
+      : "--";
 
     const fechaObj = parseFecha(fecha);
     el("fechaTxt").textContent = fechaObj ? fechaObj.toLocaleString("es-MX") : fecha;
@@ -489,6 +527,25 @@
   cargarTodo();
   setInterval(cargarTodo, CONFIG.REFRESCO_MS);
   setInterval(actualizarFooter, 1000);
+
+  // ---------- Modo oscuro ----------
+  function aplicarTema(modo) {
+    if (modo === "dark") {
+      document.documentElement.setAttribute("data-theme", "dark");
+      el("themeBtn").textContent = "☀️ Claro";
+    } else {
+      document.documentElement.removeAttribute("data-theme");
+      el("themeBtn").textContent = "🌙 Oscuro";
+    }
+  }
+
+  let temaActual = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  aplicarTema(temaActual);
+
+  el("themeBtn").addEventListener("click", () => {
+    temaActual = temaActual === "dark" ? "light" : "dark";
+    aplicarTema(temaActual);
+  });
 </script>
 </body>
 </html>
