@@ -140,7 +140,9 @@
     margin-bottom: 14px;
   }
   .estado-badge.on  { background: var(--green-bg); color: #0F7A38; }
-  .estado-badge.off { background: #F1F3F7; color: var(--text-mid); }
+  [data-theme="dark"] .estado-badge.on { color: var(--green); }
+  .estado-badge.off { background: #FDECEC; color: #B91C1C; }
+  [data-theme="dark"] .estado-badge.off { background: #3A1414; color: var(--red); }
   .estado-badge .dot2 { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
   .meta-row { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--border); font-size: 13px; }
@@ -183,13 +185,17 @@
     gap: 12px;
     padding: 11px 20px;
     border-bottom: 1px solid var(--border);
+    border-left: 3px solid transparent;
     font-size: 13px;
   }
+  .log-row.row-on  { border-left-color: var(--green); }
+  .log-row.row-off { border-left-color: var(--red); }
   @media (max-width: 640px) { .log-row { grid-template-columns: 16px 1fr 60px; } .log-row .origen, .log-row .nivel { display: none; } }
   .log-row:last-child { border-bottom: none; }
   .log-row .estado-dot { width: 8px; height: 8px; border-radius: 50%; }
-  .log-row .estado-dot.on { background: var(--green); }
-  .log-row .estado-dot.off { background: var(--text-low); }
+  .log-row .estado-dot.on { background: var(--green); box-shadow: 0 0 0 3px var(--green-bg); }
+  .log-row .estado-dot.off { background: var(--red); box-shadow: 0 0 0 3px #FDECEC; }
+  [data-theme="dark"] .log-row .estado-dot.off { box-shadow: 0 0 0 3px #3A1414; }
   .log-row .fecha { color: var(--text); font-weight: 500; }
   .log-row .fecha small { display: block; color: var(--text-low); font-weight: 400; font-size: 11.5px; }
   .log-row .origen { color: var(--text-mid); font-size: 12px; }
@@ -411,7 +417,7 @@
       const on = e === "ENCENDIDA";
       const origenBadge = o ? `<span class="origen-badge ${o === "MANUAL" ? "manual" : "automatico"}">${o}</span>` : "";
       return `
-        <div class="log-row">
+        <div class="log-row ${on ? "row-on" : "row-off"}">
           <span class="estado-dot ${on ? "on" : "off"}"></span>
           <span class="fecha">${e}<small>${d ? d.toLocaleString("es-MX") : f}${motivo ? " · " + motivo : ""}</small></span>
           <span class="origen">${origenBadge}</span>
