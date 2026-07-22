@@ -308,8 +308,7 @@
 
 <script>
   const CONFIG = {
-    CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAisVFQi8KiaPp3A9X6tUBoeEPM38mIL3VLqN3oveDqAOBeZkbZngXCKnpvOjnpfMo_JqIhFp_rAW7/pub?gid=0&single=true&output=csv",
-    NIVEL_CSV_URL: "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAisVFQi8KiaPp3A9X6tUBoeEPM38mIL3VLqN3oveDqAOBeZkbZngXCKnpvOjnpfMo_JqIhFp_rAW7/pub?gid=1716776216&single=true&output=csv",
+    API_URL: "https://script.google.com/macros/s/AKfycbzq5LOYFAppvJLuqwpho1v_xe_eVbaVA8-Qp3hPCDw1jJGCABP7vqgNFHnskq0MdeoG/exec",
     REFRESCO_MS: 10000
   };
 
@@ -499,42 +498,38 @@
     actualizarConexion();
   }
 
-  function cargarDatos() {
-    if (!CONFIG.CSV_URL || CONFIG.CSV_URL.includes("PEGA_AQUI")) {
-      el("logList").innerHTML = `<div class="error-box">Falta configurar CONFIG.CSV_URL en este archivo.</div>`;
+  function cargarTodoDesdeAPI() {
+    if (!CONFIG.API_URL || CONFIG.API_URL.includes("PEGA_AQUI")) {
+      el("logList").innerHTML = `<div class="error-box">Falta configurar CONFIG.API_URL en este archivo.</div>`;
       return;
     }
-    fetch(CONFIG.CSV_URL, { cache: "no-store" })
-      .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
-      .then(texto => {
-        const rows = parseCSV(texto).filter(r => r.length >= 4 && (r[1] === "ENCENDIDA" || r[1] === "APAGADA"));
-        render(rows);
-      })
-      .catch(err => {
-        el("logList").innerHTML = `<div class="error-box">No se pudo leer la hoja.<br>Revisa la publicación CSV.<br><code>${err.message || err}</code></div>`;
-        el("connDot").className = "dot bad"; el("connText").textContent = "Error de lectura";
-      });
-  }
 
-  function cargarNivel() {
-    if (!CONFIG.NIVEL_CSV_URL || CONFIG.NIVEL_CSV_URL.includes("PEGA_AQUI")) return;
-    fetch(CONFIG.NIVEL_CSV_URL, { cache: "no-store" })
-      .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.text(); })
-      .then(texto => {
-        const filas = parseCSV(texto).filter(r => r.length >= 2 && r[0]);
-        if (!filas.length) return;
-        const [fecha, nivel, litrosHoy] = filas[0];
-        renderNivel(fecha, nivel);
-        if (litrosHoy !== undefined && litrosHoy !== "") {
-          const litrosNum = parseFloat(litrosHoy);
+    fetch(CONFIG.API_URL + "?tipo=listar", { cache: "no-store" })
+      .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
+      .then(data => {
+        const rows = (data.eventos || []).map(ev => [ev.fecha, ev.estado, ev.origen, ev.nivel, ev.motivo]);
+        render(rows);
+
+        if (data.nivelActual) {
+          renderNivel(data.nivelActual.fecha, data.nivelActual.nivel);
+          const litrosNum = parseFloat(data.nivelActual.litrosHoy);
           el("statConsumoHoy").textContent = isNaN(litrosNum) ? "-- L" : Math.round(litrosNum) + " L";
         }
       })
-      .catch(err => console.warn("No se pudo leer el nivel en vivo:", err));
+      .catch(err => {
+        el("logList").innerHTML = `
+          <div class="error-box">
+            No se pudo conectar con el script.<br>
+            Revisa que la URL de implementación siga activa.<br>
+            <code>${err.message || err}</code>
+          </div>`;
+        el("connDot").className = "dot bad";
+        el("connText").textContent = "Error de lectura";
+      });
   }
 
   let ultimaRevision = null;
-  function cargarTodo() { cargarDatos(); cargarNivel(); ultimaRevision = Date.now(); }
+  function cargarTodo() { cargarTodoDesdeAPI(); ultimaRevision = Date.now(); }
   function actualizarFooter() {
     if (!ultimaRevision) return;
     const seg = Math.round((Date.now() - ultimaRevision) / 1000);
