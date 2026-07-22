@@ -328,7 +328,22 @@
       const d = new Date(+anio, +b - 1, +a, +hh, +mm, +ss);
       return isNaN(d.getTime()) ? null : d;
     }
-    return null;
+    // Último recurso: deja que el navegador intente interpretarlo directamente
+    const generico = new Date(str);
+    return isNaN(generico.getTime()) ? null : generico;
+  }
+
+  // Formateador propio en 12 horas (am/pm), para no depender de que el
+  // navegador soporte bien toLocaleString con la configuración regional.
+  const MESES_CORTOS = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  function formatoFechaLegible(d) {
+    if (!d) return "--";
+    let h = d.getHours();
+    const ampm = h >= 12 ? "p.m." : "a.m.";
+    h = h % 12;
+    if (h === 0) h = 12;
+    const mm = String(d.getMinutes()).padStart(2, "0");
+    return `${d.getDate()} ${MESES_CORTOS[d.getMonth()]} ${d.getFullYear()}, ${h}:${mm} ${ampm}`;
   }
 
   function formatoRelativo(d) {
@@ -374,6 +389,16 @@
 
   let filasEventos = [];
   let filtroActivo = "hoy";
+
+  // El "origen" que manda el ESP32 indica cómo se ENCENDIÓ la bomba, no por
+  // qué se apagó. Para que la etiqueta no contradiga al motivo mostrado
+  // (ej. "MANUAL" junto a "Automático: tinaco lleno"), la derivamos del
+  // motivo real de cada evento.
+  function derivarOrigenReal(origenOriginal, motivo) {
+    if (motivo && motivo.indexOf("Botón") !== -1) return "MANUAL";
+    if (motivo) return "AUTOMATICO";
+    return origenOriginal || "--";
+  }
 
   function dibujarSparkline(rows) {
     const conNivel = rows.filter(r => r[3] !== undefined && !isNaN(parseInt(r[3], 10))).slice(-20);
@@ -422,11 +447,11 @@
     const html = filtradas.slice().reverse().slice(0, 100).map(([f, e, o, n, motivo]) => {
       const d = parseFecha(f);
       const on = e === "ENCENDIDA";
-      const origenBadge = o ? `<span class="origen-badge ${o === "MANUAL" ? "manual" : "automatico"}">${o}</span>` : "";
+      const origenBadge = `<span class="origen-badge ${derivarOrigenReal(o, motivo) === "MANUAL" ? "manual" : "automatico"}">${derivarOrigenReal(o, motivo)}</span>`;
       return `
         <div class="log-row ${on ? "row-on" : "row-off"}">
           <span class="estado-dot ${on ? "on" : "off"}"></span>
-          <span class="fecha">${e}<small>${d ? d.toLocaleString("es-MX") : f}${motivo ? " · " + motivo : ""}</small></span>
+          <span class="fecha">${e}<small>${d ? formatoFechaLegible(d) : f}${motivo ? " · " + motivo : ""}</small></span>
           <span class="origen">${origenBadge}</span>
           <span></span>
           <span class="nivel">${n}%</span>
@@ -450,17 +475,16 @@
     filasEventos = rows;
 
     const ultimo = rows[rows.length - 1];
-    const [fecha, estado, origen] = ultimo;
+    const [fecha, estado, origen, , motivoUltimo] = ultimo;
     const encendida = estado === "ENCENDIDA";
 
     el("estadoBadge").innerHTML = '<span class="dot2"></span>' + (encendida ? "Encendida" : "Apagada");
     el("estadoBadge").className = "estado-badge " + (encendida ? "on" : "off");
-    el("origenTxt").innerHTML = origen
-      ? `<span class="origen-badge ${origen === "MANUAL" ? "manual" : "automatico"}">${origen}</span>`
-      : "--";
+    const origenReal = derivarOrigenReal(origen, motivoUltimo);
+    el("origenTxt").innerHTML = `<span class="origen-badge ${origenReal === "MANUAL" ? "manual" : "automatico"}">${origenReal}</span>`;
 
     const fechaObj = parseFecha(fecha);
-    el("fechaTxt").textContent = fechaObj ? fechaObj.toLocaleString("es-MX") : fecha;
+    el("fechaTxt").textContent = fechaObj ? formatoFechaLegible(fechaObj) : fecha;
     ultimaFechaEventos = fechaObj;
 
     const hoy = new Date();
@@ -494,7 +518,7 @@
 
     const fechaObj = parseFecha(fecha);
     ultimaFechaNivel = fechaObj;
-    el("nivelFechaTxt").textContent = fechaObj ? fechaObj.toLocaleString("es-MX") : (fecha || "--");
+    el("nivelFechaTxt").textContent = fechaObj ? formatoFechaLegible(fechaObj) : (fecha || "--");
     actualizarConexion();
   }
 
