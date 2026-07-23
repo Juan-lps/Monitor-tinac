@@ -627,12 +627,27 @@
     }
     const clave = prompt("Clave de administrador:");
     if (clave === null || clave === "") return;
-    claveAdmin = clave;
-    modoAdmin = true;
-    el("adminBtn").textContent = "🔓 Salir admin";
-    el("panelAdmin").style.display = "block";
-    cargarConfigRetencion();
-    renderHistorial();
+
+    el("adminBtn").textContent = "Verificando…";
+    fetch(`${CONFIG.API_URL}?tipo=verificarClave&clave=${encodeURIComponent(clave)}`, { cache: "no-store" })
+      .then(r => r.text())
+      .then(txt => {
+        if (txt.trim() === "OK") {
+          claveAdmin = clave;
+          modoAdmin = true;
+          el("adminBtn").textContent = "🔓 Salir admin";
+          el("panelAdmin").style.display = "block";
+          cargarConfigRetencion();
+          renderHistorial();
+        } else {
+          alert("Clave incorrecta.");
+          el("adminBtn").textContent = "🔒 Admin";
+        }
+      })
+      .catch(() => {
+        alert("Error de conexión al verificar la clave.");
+        el("adminBtn").textContent = "🔒 Admin";
+      });
   });
 
   el("guardarRetencionBtn").addEventListener("click", () => {
@@ -665,3 +680,4 @@
 </script>
 </body>
 </html>
+
