@@ -193,6 +193,13 @@
   }
   .log-row.row-on  { border-left-color: var(--green); }
   .log-row.row-off { border-left-color: var(--red); }
+  .log-row.con-admin { grid-template-columns: 20px 1fr 90px 90px 50px 28px; }
+  .btn-borrar {
+    border: none; background: transparent; cursor: pointer;
+    font-size: 14px; color: var(--text-low); padding: 4px;
+    border-radius: 6px; line-height: 1;
+  }
+  .btn-borrar:hover { background: #FDECEC; color: var(--red); }
   @media (max-width: 640px) { .log-row { grid-template-columns: 16px 1fr 60px; } .log-row .origen, .log-row .nivel { display: none; } }
   .log-row:last-child { border-bottom: none; }
   .log-row .estado-dot { width: 8px; height: 8px; border-radius: 50%; }
@@ -223,10 +230,22 @@
       <h1>Panel de tinaco</h1>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
+      <button id="adminBtn" class="chip" style="cursor:pointer;font-family:inherit">🔒 Admin</button>
       <button id="themeBtn" class="chip" style="cursor:pointer;font-family:inherit">🌙 Oscuro</button>
       <div class="chip"><span class="dot" id="connDot"></span><span id="connText">Cargando…</span></div>
     </div>
   </header>
+
+  <div class="card" id="panelAdmin" style="display:none;margin-bottom:16px;border:1px solid var(--indigo)">
+    <p style="margin:0 0 12px;font-size:12px;color:var(--indigo);font-weight:700;letter-spacing:0.03em;text-transform:uppercase">Panel de administrador</p>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <label style="font-size:13px;color:var(--text-mid)">Conservar registros de los últimos</label>
+      <input id="inputDiasRetencion" type="number" min="1" max="30" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-family:inherit">
+      <label style="font-size:13px;color:var(--text-mid)">día(s)</label>
+      <button id="guardarRetencionBtn" class="refresh-btn">Guardar</button>
+    </div>
+    <p style="margin:10px 0 0;font-size:11.5px;color:var(--text-low)">Con "Admin" activo, cada registro del historial de abajo muestra un botón 🗑️ para borrarlo individualmente.</p>
+  </div>
 
   <div class="grid-top">
     <div class="card ring-card">
@@ -444,17 +463,19 @@
       el("logList").innerHTML = '<div class="empty">No hay registros para este filtro.</div>';
       return;
     }
-    const html = filtradas.slice().reverse().slice(0, 100).map(([f, e, o, n, motivo]) => {
+    const html = filtradas.slice().reverse().slice(0, 100).map(([f, e, o, n, motivo, fila]) => {
       const d = parseFecha(f);
       const on = e === "ENCENDIDA";
       const origenBadge = `<span class="origen-badge ${derivarOrigenReal(o, motivo) === "MANUAL" ? "manual" : "automatico"}">${derivarOrigenReal(o, motivo)}</span>`;
+      const botonBorrar = (modoAdmin && fila) ? `<button class="btn-borrar" onclick="borrarRegistro(${fila})" title="Borrar este registro">🗑️</button>` : "";
       return `
-        <div class="log-row ${on ? "row-on" : "row-off"}">
+        <div class="log-row ${on ? "row-on" : "row-off"} ${modoAdmin ? "con-admin" : ""}">
           <span class="estado-dot ${on ? "on" : "off"}"></span>
           <span class="fecha">${e}<small>${d ? formatoFechaLegible(d) : f}${motivo ? " · " + motivo : ""}</small></span>
           <span class="origen">${origenBadge}</span>
           <span></span>
           <span class="nivel">${n}%</span>
+          ${modoAdmin ? `<span>${botonBorrar}</span>` : ""}
         </div>`;
     }).join("");
     el("logList").innerHTML = html;
@@ -531,7 +552,7 @@
     fetch(CONFIG.API_URL + "?tipo=listar", { cache: "no-store" })
       .then(res => { if (!res.ok) throw new Error("HTTP " + res.status); return res.json(); })
       .then(data => {
-        const rows = (data.eventos || []).map(ev => [ev.fecha, ev.estado, ev.origen, ev.nivel, ev.motivo]);
+        const rows = (data.eventos || []).map(ev => [ev.fecha, ev.estado, ev.origen, ev.nivel, ev.motivo, ev.fila]);
         render(rows);
 
         if (data.nivelActual) {
@@ -583,6 +604,64 @@
     temaActual = temaActual === "dark" ? "light" : "dark";
     aplicarTema(temaActual);
   });
+
+  // ---------- Modo administrador ----------
+  let modoAdmin = false;
+  let claveAdmin = "";
+
+  function cargarConfigRetencion() {
+    fetch(CONFIG.API_URL + "?tipo=configGet", { cache: "no-store" })
+      .then(r => r.json())
+      .then(data => { el("inputDiasRetencion").value = data.diasRetencion || 2; })
+      .catch(() => {});
+  }
+
+  el("adminBtn").addEventListener("click", () => {
+    if (modoAdmin) {
+      modoAdmin = false;
+      claveAdmin = "";
+      el("adminBtn").textContent = "🔒 Admin";
+      el("panelAdmin").style.display = "none";
+      renderHistorial();
+      return;
+    }
+    const clave = prompt("Clave de administrador:");
+    if (clave === null || clave === "") return;
+    claveAdmin = clave;
+    modoAdmin = true;
+    el("adminBtn").textContent = "🔓 Salir admin";
+    el("panelAdmin").style.display = "block";
+    cargarConfigRetencion();
+    renderHistorial();
+  });
+
+  el("guardarRetencionBtn").addEventListener("click", () => {
+    const valor = el("inputDiasRetencion").value;
+    fetch(`${CONFIG.API_URL}?tipo=configSet&valor=${encodeURIComponent(valor)}&clave=${encodeURIComponent(claveAdmin)}`, { cache: "no-store" })
+      .then(r => r.text())
+      .then(txt => {
+        if (txt.startsWith("OK")) {
+          alert("Guardado: se conservarán " + valor + " día(s) de historial.");
+        } else {
+          alert("No se pudo guardar (clave incorrecta o valor inválido).");
+        }
+      })
+      .catch(() => alert("Error de conexión al guardar."));
+  });
+
+  window.borrarRegistro = function (fila) {
+    if (!confirm("¿Borrar este registro? No se puede deshacer.")) return;
+    fetch(`${CONFIG.API_URL}?tipo=borrarFila&fila=${fila}&clave=${encodeURIComponent(claveAdmin)}`, { cache: "no-store" })
+      .then(r => r.text())
+      .then(txt => {
+        if (txt.startsWith("OK")) {
+          cargarTodo();
+        } else {
+          alert("No se pudo borrar (clave incorrecta o registro inválido).");
+        }
+      })
+      .catch(() => alert("Error de conexión al borrar."));
+  };
 </script>
 </body>
 </html>
